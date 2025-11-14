@@ -1,0 +1,21 @@
+{
+    "models": {
+        "deepseek": {
+            "api_key": "sk-2b7fc34dcdb9441c8c30d77dfabae68d",
+            "base_url": "https://api.deepseek.com/v1",
+            "args": {
+                "max_tokens": 4096,
+                "temperature": 0.7
+            },
+            "timeout": 120,
+            "available_models": [
+                "deepseek-chat",
+                "deepseek-coder",
+                "deepseek-reasoner"
+            ],
+            "model": "deepseek-chat"
+        }
+    },
+    "model": "deepseek-chat",
+    "vision": true
+}
