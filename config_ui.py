@@ -30,22 +30,20 @@ def save_config(config, file_path):
 
 def run_streamlit_app():
     st.set_page_config(page_title="QFurina 配置", layout="wide")
-    st.title("QFurina 配置")
+    st.title("QFurina 配置（云端版，仅编辑 JSON）")
 
-    # 直接从本地 JSON 加载配置
+    # 直接从本项目的 config 目录加载配置
     config = load_config(CONFIG_PATH)
     model_config = load_config(MODEL_CONFIG_PATH)
 
     if "models" not in model_config:
         model_config["models"] = {}
 
-    section = st.sidebar.radio("选择配置部分", ["基础配置", "模型配置", "系统消息", "插件配置"])
+    section = st.sidebar.radio("选择配置部分", ["基础配置", "模型配置", "系统消息", "插件配置", "导出配置"])
 
-    # ================== 基础配置 ==================
+    # ---------- 基础配置 ----------
     if section == "基础配置":
         st.header("基础配置")
-        st.info("如果使用 GPT 系列模型，请在此处填写 API Key，并忽略模型配置部分。")
-
         col1, col2 = st.columns(2)
         with col1:
             config["api_key"] = st.text_input("API Key", config.get("api_key", ""))
@@ -61,7 +59,7 @@ def run_streamlit_app():
                 "Admin ID（管理员 QQ 号）", value=config.get("admin_id", 0)
             )
 
-            # 处理回复概率，保证是 0~1 的 float
+            # 回复概率，保证是 0~1 的 float
             raw_reply_prob = config.get("reply_probability", 0.024)
             try:
                 reply_prob = float(raw_reply_prob)
@@ -83,24 +81,20 @@ def run_streamlit_app():
             value=config.get("r18", 2),
         )
 
-        st.info("默认 base_url: https://api.openai.com/v1")
         config["base_url"] = st.text_input(
             "Base URL (可选)",
             config.get("base_url", "https://api.openai.com/v1"),
         )
 
-    # ================== 模型配置 ==================
+    # ---------- 模型配置 ----------
     elif section == "模型配置":
-        st.header("模型配置")
-        st.info("这里适用于非 GPT 系列模型。若使用 GPT，请在基础配置中设置。")
-
+        st.header("模型配置（非 GPT 模型）")
         model_types = list(model_config.get("models", {}).keys())
 
         if not model_types:
             st.warning("当前没有任何模型配置，请先在 model.json 中添加 models 字段。")
         else:
             selected_model_type = st.selectbox("选择模型类型", model_types)
-
             if selected_model_type:
                 st.subheader(f"{selected_model_type} 配置")
                 model_details = model_config["models"].get(selected_model_type, {})
@@ -129,7 +123,7 @@ def run_streamlit_app():
 
                 model_config["models"][selected_model_type] = model_details
 
-    # ================== 系统消息 ==================
+    # ---------- 系统消息 ----------
     elif section == "系统消息":
         st.header("系统消息")
         config["system_message"] = config.get("system_message", {})
@@ -138,23 +132,45 @@ def run_streamlit_app():
             config["system_message"].get("character", ""),
             height=300,
         )
-        st.info("在这里设置 AI 的角色和行为规则，会影响回复风格和内容。")
+        st.info("这里的设定会直接写入 config/config.json -> system_message.character")
 
-    # ================== 插件配置 ==================
+    # ---------- 插件配置 ----------
     elif section == "插件配置":
         st.header("插件配置")
         all_plugins = config.get("enabled_plugins", [])
+        # 为了方便，在这里允许手动输入全部插件列表
+        raw = st.text_input(
+            "全部可用插件名（逗号分隔，可留空）",
+            ",".join(all_plugins) if all_plugins else "",
+            help="例如：example,ai_drawing,weather,at_only,deepseek_chat",
+        )
+        if raw.strip():
+            all_plugins = [x.strip() for x in raw.split(",") if x.strip()]
         enabled_plugins = st.multiselect(
-            "启用的插件", all_plugins, default=all_plugins
+            "启用的插件",
+            all_plugins,
+            default=all_plugins,
         )
         config["enabled_plugins"] = enabled_plugins
-        st.info("选择要启用的插件，这些插件将增强 AI 的功能。")
+        st.info("这里选择的列表会写入 config/config.json -> enabled_plugins")
 
-    # ================== 保存按钮 ==================
-    if st.button("保存配置"):
+    # ---------- 导出配置 ----------
+    elif section == "导出配置":
+        st.header("导出当前 config.json")
+        pretty_json = json.dumps(config, ensure_ascii=False, indent=4)
+        st.code(pretty_json, language="json")
+        st.download_button(
+            "下载 config.json",
+            data=pretty_json.encode("utf-8"),
+            file_name="config.json",
+            mime="application/json",
+        )
+
+    # ---------- 保存按钮 ----------
+    if st.button("保存配置到云端容器"):
         save_config(config, CONFIG_PATH)
         save_config(model_config, MODEL_CONFIG_PATH)
-        st.success("配置已保存")
+        st.success("已保存到该 Streamlit 容器的 config/config.json 和 config/model.json")
 
 
 if __name__ == "__main__":
